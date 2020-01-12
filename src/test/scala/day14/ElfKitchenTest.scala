@@ -48,4 +48,15 @@ class ElfKitchenTest extends AnyFlatSpec {
   it should "solve the puzzle" in {
     assert(ElfKitchen.shortsToString(new ElfKitchen(Seq(3, 7)).sliceRecipes(637061, 10)) == "3138510102")
   }
+
+  behavior of "countUntil"
+  it should "handle the examples" in {
+    assert(new ElfKitchen(Seq(3, 7)).countUntil(ElfKitchen.stringToShorts("51589")) == 9)
+    assert(new ElfKitchen(Seq(3, 7)).countUntil(ElfKitchen.stringToShorts("01245")) == 5)
+    assert(new ElfKitchen(Seq(3, 7)).countUntil(ElfKitchen.stringToShorts("92510")) == 18)
+    assert(new ElfKitchen(Seq(3, 7)).countUntil(ElfKitchen.stringToShorts("59414")) == 2018)
+  }
+  it should "solve the puzzle" in {
+    assert(new ElfKitchen(Seq(3, 7)).countUntil(ElfKitchen.stringToShorts("637061")) == 20179081)
+  }
 }
