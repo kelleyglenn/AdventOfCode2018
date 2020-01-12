@@ -52,6 +52,24 @@ class MineTracksTest extends AnyFlatSpec {
     assert(tracks.tickUntilFirstCrash() == (136, 36))
   }
 
+  behavior of "removeCrashes"
+  it should "handle example 1" in new SetupData("example1") {
+    val tracks = new MineTracks(lines)
+    assert(tracks.removeCrashes().isEmpty)
+  }
+  it should "handle example 2" in new SetupData("example2") {
+    val tracks = new MineTracks(lines)
+    assert(tracks.removeCrashes().isEmpty)
+  }
+  it should "handle example 3" in new SetupData("example3") {
+    val tracks = new MineTracks(lines)
+    assert(tracks.removeCrashes().contains((6, 4)))
+  }
+  it should "solve the puzzle" in new SetupData("input") {
+    val tracks = new MineTracks(lines)
+    assert(tracks.removeCrashes().contains((53, 111)))
+  }
+
   class SetupData(name: String) {
     val bufferedSource: BufferedSource = Source.fromURL(getClass.getResource("/day13/" + name + ".txt"))
     val lines: Seq[String] = bufferedSource.getLines.toSeq

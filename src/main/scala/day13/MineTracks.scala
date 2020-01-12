@@ -16,7 +16,9 @@ class MineTracks(val track: Seq[String]) {
     cs
   }
 
-  def newDirectionTurn(location:(Int,Int), curDirection:Direction.Value, curTurn:Turn.Value): (Direction.Value, Turn.Value) = {
+  def newDirectionTurn(location: (Int, Int),
+                       curDirection: Direction.Value,
+                       curTurn: Turn.Value): (Direction.Value, Turn.Value) = {
     track(location._2)(location._1) match {
       case '/' =>
         (curDirection match {
@@ -40,26 +42,34 @@ class MineTracks(val track: Seq[String]) {
 
   def moveCart(c: Cart): Cart = {
     val newLocation: (Int, Int) = (c.location._1 + c.facing.diff._1, c.location._2 + c.facing.diff._2)
-    val newDirTurn: (Direction.Value, Turn.Value) = newDirectionTurn(newLocation, c.facing,c.readiedTurn)
+    val newDirTurn: (Direction.Value, Turn.Value) = newDirectionTurn(newLocation, c.facing, c.readiedTurn)
     Cart(newLocation, newDirTurn._1, newDirTurn._2)
   }
 
-  def tick(): Unit = {
+  def tick(removeCrashes: Boolean = false): Unit = {
     ticks += 1
     val sortedCarts: Seq[Cart] = carts.toSeq.sortBy(_.location)
     var newCarts: Set[Cart] = Set.empty
     sortedCarts.foreach { c: Cart =>
       carts = carts - c
-      newCarts = newCarts + moveCart(c)
+      newCarts = newCarts + (if (newCarts.map(_.location).contains(c.location)) c else moveCart(c))
       if (locationOfFirstCrash.isEmpty)
         locationOfFirstCrash = (carts ++ newCarts).groupBy(_.location).find(_._2.size > 1).map(_._1)
     }
-    carts = newCarts
+    carts =
+      if (removeCrashes)
+        newCarts.filterNot((c: Cart) => newCarts.groupBy(_.location).filter(_._2.size > 1).keySet.contains(c.location))
+      else newCarts
   }
 
   def tickUntilFirstCrash(): (Int, Int) = {
     while (locationOfFirstCrash.isEmpty) tick()
     locationOfFirstCrash.get
+  }
+
+  def removeCrashes(): Option[(Int, Int)] = {
+    while (carts.size > 1) tick(true)
+    carts.find((_: Cart) => true).map(_.location)
   }
 }
 
