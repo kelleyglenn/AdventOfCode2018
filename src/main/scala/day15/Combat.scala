@@ -55,9 +55,9 @@ class Combat(strings: Seq[String]) {
     fullRound
   }
 
-  def wageWar: (Int, Int) = {
+  def wageWar(exitCondition: () => Boolean = () => { false }): (Int, Int) = {
     var rounds = 0
-    while (Elves.members.exists(_.alive) && Goblins.members.exists(_.alive)) {
+    while (Elves.members.exists(_.alive) && Goblins.members.exists(_.alive) && !exitCondition()) {
       if (round()) rounds += 1
     }
     (rounds, (Elves.members ++ Goblins.members).filter(_.alive).toSeq.map(_.hp).sum.toInt)
@@ -65,43 +65,47 @@ class Combat(strings: Seq[String]) {
 
   trait Member {
     var hp: Short = 200
-    var attackPower: Short = 3
     var occupies: Node
     var team: Team
+    def attackPower: Short = team.attackPower
     def alive: Boolean = hp > 0
 
     def canAttack: Boolean = {
-      alive && potentialTargets.nonEmpty
+      alive && potentialAttackTargets.nonEmpty
     }
 
-    def potentialTargets: Set[Member] = {
+    def potentialAttackTargets: Set[Member] = {
       occupies.neighbors.toSet.map(_.occupier).collect { case Some(m) if m.team != team && m.alive => m }
     }
-
-    def nodesAdjacentToTargets: Set[Node] =
-      team.enemy.members
-        .filter(_.alive)
-        .flatMap(_.occupies.neighbors.toSeq)
-        .filter((n: Node) => n.occupier.isEmpty)
-
-    def nodesReachable: Set[Node] = nodesAdjacentToTargets.filter((n: Node) => occupies.pathExists(n))
 
     def canMove: Boolean = { alive && !canAttack }
 
     def move(): Unit = {
-      if (canMove) {
-        val candidateNeighbors: Map[Int, Set[Set[Node]]] =
-          nodesReachable.map((n: Node) => n.nearestNeighborsOfWithDistance(occupies)).groupMap(_._1)(_._2)
-        if (candidateNeighbors.nonEmpty) {
-          occupies.occupier = None
-          occupies = candidateNeighbors.minBy(_._1)._2.flatten.minBy(_.location.swap)
-          occupies.occupier = Some(this)
+      val aliveEnemyNeighborNodes: Set[Node] =
+        team.enemy.members.filter(_.alive).map(_.occupies).flatMap(_.neighbors.toSet)
+      val reachableAliveEnemyNeighborNodes: Set[Node] =
+        aliveEnemyNeighborNodes.filter((n: Node) => occupies.pathExists(n))
+      if (canMove && reachableAliveEnemyNeighborNodes.nonEmpty) {
+        val candidateDestinations: Set[Node] =
+          reachableAliveEnemyNeighborNodes
+            .map((n: Node) => (occupies.nearestNeighborsOfWithDistance(n)._1 + 1, n))
+            .groupMap(_._1)(_._2)
+            .minBy(_._1)
+            ._2
+        if (candidateDestinations.nonEmpty) {
+          val destination: Node = candidateDestinations.minBy(_.location.swap)
+          val candidateNeighbors: Set[Node] = destination.nearestNeighborsOfWithDistance(occupies)._2
+          if (candidateNeighbors.nonEmpty) {
+            occupies.occupier = None
+            occupies = candidateNeighbors.minBy(_.location.swap)
+            occupies.occupier = Some(this)
+          }
         }
       }
     }
 
     def attack(): Unit = {
-      val targets: Set[Member] = potentialTargets
+      val targets: Set[Member] = potentialAttackTargets
       if (alive && targets.nonEmpty) {
         val target: Member = targets.groupBy(_.hp).minBy(_._1)._2.minBy(_.occupies.location.swap)
         target.hp = (target.hp - attackPower).toShort
@@ -116,6 +120,7 @@ class Combat(strings: Seq[String]) {
 
   trait Team {
     var members: Set[Member] = Set.empty
+    var attackPower: Short = 3
     var enemy: Team = _
   }
   object Elves extends Team
@@ -131,8 +136,7 @@ class Combat(strings: Seq[String]) {
         val curUnvisitedAvailableNeighbors: Map[Node, Int] =
           unvisited
             .filter((n: (Node, Int)) => curNode._1.neighbors.toSet.contains(n._1) && n._1.occupier.isEmpty)
-            .map((n: (Node, Int)) => (n._1, n._2 min (curNode._2 + 1)))
-        // I don't think the "min" is necessary when the distance between neighbors is always 1
+            .map((n: (Node, Int)) => (n._1, curNode._2 + 1))
         unvisited = unvisited.removed(curNode._1) ++ curUnvisitedAvailableNeighbors
         visited = visited + curNode
         curNode = unvisited.minBy(_._2)
@@ -167,14 +171,44 @@ class Combat(strings: Seq[String]) {
       add(up); add(left); add(right); add(down)
       s
     }
+  }
+}
 
-    def toSeq: Seq[Node] = {
-      var s: Seq[Node] = Seq.empty
-      def add(n: Node): Unit = {
-        if (n != null) s = s :+ n
+object Combat {
+
+  def outcomeOfBattleWithLowestElfAttackPower(strings: Seq[String],
+                                              minPower: Short = 4,
+                                              maxPower: Short = 200): Option[(Int, Int, Short)] = {
+    if (maxPower - minPower == 1) {
+      println(minPower + "," + maxPower)
+      val outComes: Set[(Int, Int, Short)] = Set(
+        outcomeOfBattleWithLowestElfAttackPower(strings, minPower, minPower),
+        outcomeOfBattleWithLowestElfAttackPower(strings, maxPower, maxPower)).flatten
+      if (outComes.isEmpty) None
+      else Some(outComes.minBy(_._3))
+    }
+    else {
+      val attackPower: Short = ((minPower + maxPower) / 2).toShort
+      println(minPower + "," + attackPower + "," + maxPower)
+      val c = new Combat(strings)
+      val origElfCount: Int = c.Elves.members.size
+      c.Elves.attackPower = attackPower
+      val thisOutcome: Option[(Int, Int, Short)] = Some(c.wageWar(() => c.Elves.members.exists(!_.alive)) match {
+        case (r, hp) => (r, hp, attackPower)
+      })
+      if (c.Elves.members.count(_.alive) < origElfCount) {
+        if (attackPower < maxPower) {
+          outcomeOfBattleWithLowestElfAttackPower(strings, (attackPower + 1).toShort, maxPower)
+        }
+        else None
       }
-      add(up); add(left); add(right); add(down)
-      s
+      else if (attackPower > minPower) {
+        val otherOutcome: Option[(Int, Int, Short)] =
+          outcomeOfBattleWithLowestElfAttackPower(strings, minPower, (attackPower - 1).toShort)
+        if (otherOutcome.isDefined && otherOutcome.get._3 < attackPower) otherOutcome
+        else thisOutcome
+      }
+      else thisOutcome
     }
   }
 }

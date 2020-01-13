@@ -225,24 +225,57 @@ class CombatTest extends AnyFlatSpec {
   behavior of "wageWar"
   it should "handle example 4" in new SetupData("example4") {
     val c = new Combat(lines)
-    assert(c.wageWar == (47, 590))
+    assert(c.wageWar() == (47, 590))
   }
   it should "handle example 5" in new SetupData("example5") {
     val c = new Combat(lines)
-    assert(c.wageWar == (37, 982))
+    assert(c.wageWar() == (37, 982))
   }
   it should "handle example 6" in new SetupData("example6") {
     val c = new Combat(lines)
-    assert(c.wageWar == (46, 859))
+    assert(c.wageWar() == (46, 859))
+  }
+  it should "handle example 7" in new SetupData("example7") {
+    val c = new Combat(lines)
+    assert(c.wageWar() == (35, 793))
+  }
+  it should "handle example 8" in new SetupData("example8") {
+    val c = new Combat(lines)
+    assert(c.wageWar() == (54, 536))
+  }
+  it should "handle example 9" in new SetupData("example9") {
+    val c = new Combat(lines)
+    assert(c.wageWar() == (20, 937))
   }
   it should "solve the puzzle" in new SetupData("input") {
     val c = new Combat(lines)
-    assert(c.wageWar == (85, 2674))
+    // This take about one minute to run
+    assert(c.wageWar() == (85, 2674))
+  }
+
+  behavior of "outcomeOfBattleWithLowestElfAttackPower"
+  it should "handle example 4" in new SetupData("example4") {
+    assert(Combat.outcomeOfBattleWithLowestElfAttackPower(lines).contains((29, 172, 15)))
+  }
+  it should "handle example 6" in new SetupData("example6") {
+    assert(Combat.outcomeOfBattleWithLowestElfAttackPower(lines).contains((33, 948, 4)))
+  }
+  it should "handle example 7" in new SetupData("example7") {
+    assert(Combat.outcomeOfBattleWithLowestElfAttackPower(lines).contains((37, 94, 15)))
+  }
+  it should "handle example 8" in new SetupData("example8") {
+    assert(Combat.outcomeOfBattleWithLowestElfAttackPower(lines).contains((39, 166, 12)))
+  }
+  it should "handle example 9" in new SetupData("example9") {
+    assert(Combat.outcomeOfBattleWithLowestElfAttackPower(lines).contains((30, 38, 34)))
+  }
+  it should "solve the puzzle" in new SetupData("input") {
+    // This requires waging war 8 times and takes about 7 minutes
+    assert(Combat.outcomeOfBattleWithLowestElfAttackPower(lines).contains((35, 1535, 25)))
   }
 
   class SetupData(name: String) {
     val bufferedSource: BufferedSource = Source.fromURL(getClass.getResource("/day15/" + name + ".txt"))
     val lines: Seq[String] = bufferedSource.getLines.toSeq
   }
-
 }
