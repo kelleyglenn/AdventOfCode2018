@@ -1,7 +1,7 @@
 package day14
 
 class ElfKitchen(val elfRecipes: Seq[Short]) {
-  var elfLocations: Seq[RecipeNode] = elfRecipes.map(RecipeNode(_))
+  var elfLocations: Seq[RecipeNode] = elfRecipes.map(new RecipeNode(_))
   (0 until elfLocations.size - 1).foreach { i: Int =>
     ElfKitchen.assignNodes(elfLocations(i), elfLocations(i + 1))
   }
@@ -88,7 +88,7 @@ object ElfKitchen {
   }
 
   def recipeNodesFromSeq(seq: Seq[Short]): (RecipeNode, RecipeNode, Int) = {
-    val nodes: Seq[RecipeNode] = seq.map(RecipeNode(_))
+    val nodes: Seq[RecipeNode] = seq.map(new RecipeNode(_))
     (0 until nodes.size - 1).foreach { i: Int =>
       assignNodes(nodes(i), nodes(i + 1))
     }
@@ -96,6 +96,4 @@ object ElfKitchen {
   }
 }
 
-case class RecipeNode(value: Short, var left: RecipeNode = null, var right: RecipeNode = null) {
-  override def toString: String = value.toString
-}
+class RecipeNode(val value: Short, var left: RecipeNode = null, var right: RecipeNode = null)
