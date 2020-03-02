@@ -63,3 +63,16 @@ seti 5 6 4
 28 eqrr: Set Reg(3) to Reg(2) == Reg(0) ? 1 : 0
 29 addr: Set Reg(4) to Reg(3) + Reg(4)
 30 seti: Set Reg(4) to 5
+
+// 16777215 == 0xFFFFFF
+//  5234604 == 0x4FDFAC
+//    65899 == 0x01016B
+//    65536 == 0x010000
+//      255 == 0xFF
+
+// Reg(0) = Target value
+// Reg(1) =
+// Reg(2) =
+// Reg(3) =
+// Reg(4) = IP
+// Reg(5) =

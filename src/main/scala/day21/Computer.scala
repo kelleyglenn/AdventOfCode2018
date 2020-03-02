@@ -3,17 +3,20 @@ package day21
 class Computer(var r: Registers) {
   var ip: Long = 0
 
-  def execute(instructions: Seq[Instruction], debug: Registers => Unit = (_: Registers) => {}): (Registers, Int) = {
+  def execute(instructions: Seq[Instruction], debugAndExit: Registers => Boolean = (_: Registers) => {
+    false
+  }): (Registers, Int) = {
     var instCt: Int = 0
     var ipOffset: Short = 0
     var ipRegID: Option[Short] = None
-    while (instructions.indices.contains(ip + ipOffset)) {
+    var exit = false
+    while (instructions.indices.contains(ip + ipOffset) && !exit) {
       instructions((ip + ipOffset).toInt) match {
         case op: OpInstruction =>
           if (ipRegID.isDefined) r = r.updateByNum(ipRegID.get, ip)
           r = Computer.opCodeMap(op.opCode).apply(r, op)
+          exit = debugAndExit(r)
           instCt += 1
-          debug(r)
           if (ipRegID.isDefined) ip = r(ipRegID.get)
           ip = (ip + 1).toShort
         case ipInst: IPInstruction =>
@@ -192,4 +195,95 @@ case class OpInstruction(opCode: String, inputA: Int, inputB: Int, outputC: Int)
 
 case class IPInstruction(regID: Short) extends Instruction {
   override def mkString: String = "Tie IP to Reg(" + regID + ")"
+}
+
+class SimulatedInput(var r: Registers) {
+  def execute(debugAndExit: Registers => Boolean = (_: Registers) => {
+    false
+  }): Registers = {
+    var exit: Boolean = line6(debugAndExit)
+    while (r._0 != r._2 && !exit) {
+      exit = debugAndExit(r.copy(_4 = 28))
+      if (!exit) exit = line6(debugAndExit)
+    }
+    debugAndExit(r.copy(_4 = 28))
+    r
+  }
+
+  def line6(debugAndExit: Registers => Boolean): Boolean = {
+    var exit: Boolean = debugAndExit(r.copy(_4 = 5))
+    r = r.copy(_5 = r._2 | 65536, _2 = 5234604)
+    if (!exit) {
+      exit = line8(debugAndExit)
+      while (r._3 != 1 && !exit) {
+        if (!exit) {
+          exit = line18(debugAndExit)
+          if (r._1 == 1 && !exit) {
+            r = r.copy(_5 = r._3)
+            if (!exit) exit = line8(debugAndExit)
+          }
+        }
+      }
+    }
+    exit
+  }
+
+  def line8(debugAndExit: Registers => Boolean): Boolean = {
+    // line 8,9,10,11,12,13
+    var exit: Boolean = debugAndExit(r.copy(_4 = 7))
+    if (!exit) {
+      val r2: Long = (((r._2 + (r._5 % 256)) % 16777216) * 65899) % 16777216
+      r = r.copy(_2 = r2, _3 = if (256 > r._5) 0 else r._3)
+      exit = debugAndExit(r.copy(_4 = 13))
+    }
+    exit
+  }
+
+  def line18(debugAndExit: Registers => Boolean): Boolean = {
+    // line 18,19
+    var exit: Boolean = debugAndExit(r.copy(_4 = 17))
+    if (!exit) {
+      r = r.copy(_1 = if ((r._3 + 1) * 256 > r._5) 1 else 0)
+      exit = debugAndExit(r.copy(_4 = 20))
+    }
+    exit
+  }
+}
+
+class SimulatedInput2(targetValue: Long) {
+  def execute(debug: Registers => Boolean = (_: Registers) => {
+    false
+  }): Unit = {
+    var curR: Registers = nextValue(Registers(targetValue, 0, 0, 0, 0, 0))
+    var exit: Boolean = debug(curR.copy(_4 = 27))
+    while (curR._0 != curR._2 && !exit) {
+      curR = nextValue(curR)
+      exit = debug(curR.copy(_4 = 27))
+    }
+  }
+
+  def nextValue(r: Registers): Registers = {
+    var newR: Registers = line6to12(r)
+    if (255 > newR._5) newR
+    else {
+      newR = line18to19(newR.copy(_3 = 0))
+      while (newR._1 <= newR._5) {
+        newR = line18to19(r.copy(_3 = newR._3 + 1))
+      }
+      newR.copy(_5 = newR._3)
+    }
+  }
+
+  def line6to12(r: Registers): Registers = {
+    line8to12(r.copy(_2 = 5234604, _5 = r._2 | 65536))
+  }
+
+  def line8to12(r: Registers): Registers = {
+    val reg2: Long = ((((r._5 % 256) + r._2) % (256 * 256 * 256)) * ((256 * 256) + 363)) % (256 * 256 * 256)
+    r.copy(_2 = reg2, _3 = r._5 % 256)
+  }
+
+  def line18to19(r: Registers): Registers = {
+    r.copy(_1 = (r._3 + 1) * 256)
+  }
 }
